@@ -8,7 +8,7 @@ import json
 
 
 class ExecutionEnvelop:
-    def __init__(self, envelop, horizon_uri):
+    def __init__(self, envelop, horizon_uri=None):
         if horizon_uri is None:
             horizon_uri = os.environ.get('HORIZON_ADDRESS')
         horizon = Horizon(horizon_uri)

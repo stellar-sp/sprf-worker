@@ -61,7 +61,9 @@ class S(BaseHTTPRequestHandler):
 
         docker_client = docker.from_env()
         smart_program_image_address = base64.b64decode(smart_account['data']['smart_program_image_address']).decode()
-        container = docker_client.containers.run(image=smart_program_image_address,
+        smart_program_image_hash = base64.b64decode(smart_account['data']['smart_program_image_hash']).decode()
+        image_complete_name = smart_program_image_address + '@sha256:' + smart_program_image_hash
+        container = docker_client.containers.run(image=image_complete_name,
                                                  volumes=
                                                  {
                                                      current_state_file: {'bind': '/state', 'mode': 'rw'},
