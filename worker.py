@@ -44,6 +44,9 @@ class S(BaseHTTPRequestHandler):
 
         execution_envelop = ExecutionEnvelop(envelop)
         execution_envelop.verify()
+        if not execution_envelop.is_it_in_right_order():
+            raise Exception("retry some second later. there is some transactions submitted before it")
+
         smart_account = execution_envelop.get_smart_account()
         sender = execution_envelop.get_sender()
 
@@ -80,7 +83,7 @@ class S(BaseHTTPRequestHandler):
                 print("the state change by the program")
                 print("signing transaction and getting result back to user")
                 upload_file_to_ipfs(current_state_file)
-                transaction = create_transaction(new_state_file_hash, smart_account, sender)
+                transaction = create_transaction(new_state_file_hash, smart_account, sender, execution_envelop)
 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
@@ -122,20 +125,23 @@ def upload_file_to_ipfs(file):
     return hash
 
 
-def create_transaction(new_state_hash, smart_account, user_account_public_key):
-    sequence = horizon.account(smart_account['address']).get('sequence')
+def create_transaction(new_state_hash, smart_account, user_account_public_key, execution_envelop):
+    additional_fee = int(base64.b64decode(smart_account['data']['execution_base_fee']).decode()) / 10000000
 
     operations = [
-        Payment(source=user_account_public_key, destination=smart_account['address'],
-                amount=smart_account['data']['execution_base_fee'], asset=Asset("XLM")),
-        ManageData(data_name='current_state', data_value=new_state_hash, source=smart_account['address'])
+        Payment(source=user_account_public_key, destination=smart_account['account_id'],
+                amount=str(additional_fee), asset=Asset("XLM")),
+        ManageData(data_name='current_state', data_value=new_state_hash, source=smart_account['account_id']),
+        ManageData(data_name='last_paging_token_made_change', data_value=execution_envelop.get_paging_token(),
+                   source=smart_account)
     ]
 
     tx = Transaction(
-        source=smart_account['address'],
-        sequence=int(sequence),
+        source=user_account_public_key,
+        sequence=horizon.account(user_account_public_key).get('sequence'),
         fee=1000 * len(operations),
-        operations=operations
+        operations=operations,
+        time_bounds={'minTime': 0, 'maxTime': execution_envelop.get_execution_timeout_date()}
     )
 
     envelope = Te(tx=tx, network_id=NETWORK_PASSPHRASE)
