@@ -1,4 +1,3 @@
-import os
 import argparse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
@@ -11,16 +10,15 @@ from stellar_base.operation import Payment, ManageData
 from stellar_base.transaction_envelope import TransactionEnvelope as Te
 from stellar_base.keypair import Keypair
 from stellar_base.asset import Asset
-import ipfshttpclient
 from execute_envelop import ExecutionEnvelop
 from environs import Env
+from ipfs_utils import *
 
 if os.path.exists('./.env1'):
     env = Env()
     env.read_env(path="./.env1")
 
 HORIZON_ADDRESS = os.environ.get('HORIZON_ADDRESS')
-IPFS_ADDRESS = os.environ.get('IPFS_ADDRESS')
 NETWORK_PASSPHRASE = os.environ.get('NETWORK_PASSPHRASE')
 WORKER_SECRET_KEY = os.environ.get('WORKER_SECRET_KEY')
 
@@ -102,27 +100,6 @@ class S(BaseHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({'state': 'not-changed', 'log': container_log.decode()}).encode())
-
-
-def get_sha256_of_file(file):
-    with ipfshttpclient.connect(IPFS_ADDRESS) as client:
-        hash = client.add(file, only_hash=True)['Hash']
-    return hash
-
-
-def load_ipfs_file(ipfs_hash):
-    file_path = '/tmp/' + ipfs_hash
-    with ipfshttpclient.connect(IPFS_ADDRESS) as client:
-        with open(file_path, 'wb') as f:
-            f.write(client.cat(ipfs_hash))
-
-    return file_path
-
-
-def upload_file_to_ipfs(file):
-    with ipfshttpclient.connect(IPFS_ADDRESS) as client:
-        hash = client.add(file)['Hash']
-    return hash
 
 
 def create_transaction(new_state_hash, smart_account, user_account_public_key, execution_envelop):
