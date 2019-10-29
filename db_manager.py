@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-DB_FILE = os.environ.get("DB_FILE")
+DB_FILE = os.environ.get("DB_FILE", "./.db")
 
 
 class DbManager:
@@ -14,7 +14,10 @@ class DbManager:
         cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='configs';")
         item = cur.fetchone()
         if item is None:
-            cur.execute("CREATE TABLE configs(key text, value text);")
+            cur.execute("CREATE TABLE configs(key text primary key, value text);")
+            cur.execute("CREATE TABLE smart_accounts(account_id text primary key)")
+            cur.execute("CREATE TABLE smart_transaction(transaction_hash text primary key, smart_account_id text"
+                        ", paging_token int)")
 
     def get_latest_checked_paging_token(self):
         cur = self.conn.cursor()
@@ -39,3 +42,20 @@ class DbManager:
         if item is not None:
             return item[0]
         return None
+
+    def add_smart_account(self, account_id):
+        cur = self.conn.cursor()
+        cur.execute("insert into smart_accounts(account_id) values('" + account_id + "')")
+        self.conn.commit()
+
+    def add_smart_transaction(self, smart_account_id, transaction_hash, paging_token, xdr):
+        cur = self.conn.cursor()
+        cur.execute(
+            "insert into smart_transactions(transaction_hash, smart_account_id, paging_token, xdr) values('"
+            + transaction_hash + "', '" + smart_account_id + "', " + paging_token + ", '" + xdr + "')")
+        self.conn.commit()
+
+    def get_smart_transactions(self, smart_account_id):
+        cur = self.conn.cursor()
+        cur.execute("select * from smart_transactions where smart_account_id = '" + smart_account_id + "'")
+        return cur.fetchall()

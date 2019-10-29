@@ -14,28 +14,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./.env:/app/.env
 
-  worker2:
-    build:
-      dockerfile: Dockerfile
-      context: .
-      network: host
-#    env_file:
-#      - .env2
+  redis:
+    image: redis:5
     ports:
-      - 8000:8002
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./.env:/app/.env
-
-  worker3:
-    build:
-      dockerfile: Dockerfile
-      context: .
-      network: host
-#    env_file:
-#      - .env3
-    ports:
-      - 8000:8003
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./.env:/app/.env
+      - 6379:6379
