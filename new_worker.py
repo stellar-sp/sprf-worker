@@ -1,4 +1,4 @@
-from transactions_exposer import run_rest_service
+from transaction_receiver import run_rest_service
 import threading
 from ledger_checker import run_ledger_checker
 

@@ -55,7 +55,7 @@ def add_account_if_smart(account_id):
                                                                                        'current_state'):
         return
 
-    db_manager.add_smart_account(account_id)
+    db_manager.add_smart_account(account)
 
 
 def create_transaction(smart_account, new_state_file_hash, latest_transaction_changed_state):

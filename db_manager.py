@@ -15,9 +15,9 @@ class DbManager:
         item = cur.fetchone()
         if item is None:
             cur.execute("CREATE TABLE configs(key text primary key, value text);")
-            cur.execute("CREATE TABLE smart_accounts(account_id text primary key)")
+            cur.execute("CREATE TABLE smart_accounts(account_id text primary key, data text)")
             cur.execute("CREATE TABLE smart_transaction(transaction_hash text primary key, smart_account_id text"
-                        ", paging_token int)")
+                        ", paging_token int, xdr text)")
 
     def get_latest_checked_paging_token(self):
         cur = self.conn.cursor()
@@ -43,9 +43,11 @@ class DbManager:
             return item[0]
         return None
 
-    def add_smart_account(self, account_id):
+    def add_smart_account(self, smart_account):
         cur = self.conn.cursor()
-        cur.execute("insert into smart_accounts(account_id) values('" + account_id + "')")
+        cur.execute(
+            "insert into smart_accounts(account_id, data) values('" + smart_account[
+                'id'] + "', '" + smart_account + "') ON CONFLICT(account_id) DO UPDATE SET data='" + smart_account + "';")
         self.conn.commit()
 
     def add_smart_transaction(self, smart_account_id, transaction_hash, paging_token, xdr):
@@ -59,3 +61,7 @@ class DbManager:
         cur = self.conn.cursor()
         cur.execute("select * from smart_transactions where smart_account_id = '" + smart_account_id + "'")
         return cur.fetchall()
+
+    def get_latest_transactions(self):
+        cur = self.conn.cursor()
+        return cur.execute("select * from smart_transactions order by paging_token desc limit 100").fetchall()
