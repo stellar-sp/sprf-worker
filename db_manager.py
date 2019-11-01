@@ -16,7 +16,7 @@ class DbManager:
         if item is None:
             cur.execute("CREATE TABLE configs(key text primary key, value text);")
             cur.execute("CREATE TABLE smart_accounts(account_id text primary key, data text)")
-            cur.execute("CREATE TABLE smart_transaction(transaction_hash text primary key, smart_account_id text"
+            cur.execute("CREATE TABLE smart_transactions(transaction_hash text primary key, smart_account_id text"
                         ", paging_token int, xdr text)")
 
     def get_latest_checked_paging_token(self):
@@ -65,3 +65,8 @@ class DbManager:
     def get_latest_transactions(self):
         cur = self.conn.cursor()
         return cur.execute("select * from smart_transactions order by paging_token desc limit 100").fetchall()
+
+    def delete_transaction(self, transaction_hash):
+        cur = self.conn.cursor()
+        cur.execute("delete from smart_transactions where transaction_hash='" + transaction_hash + "'")
+        self.conn.commit()

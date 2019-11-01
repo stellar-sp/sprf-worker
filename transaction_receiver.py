@@ -26,17 +26,18 @@ horizon = Horizon(HORIZON_ADDRESS)
 def receive_transaction(smart_account_id):
     tx_envelop_xdr = jsonify(request.json).json['xdr']
 
-    validation_result = requests.post(url=TRANSACTION_VALIDATOR_ADDRESS + "/validate?remove_bad_signatures=true",
-                                      json={'xdr': tx_envelop_xdr})
+    validation_result = requests.post(
+        url=TRANSACTION_VALIDATOR_ADDRESS + "/validate?remove_bad_signatures=true&remove_duplicate_signatures=true",
+        json={'xdr': tx_envelop_xdr})
     if validation_result.headers.status_code != 200:
         return validation_result
 
     imported_xdr = TxEnv.TransactionEnvelope.from_xdr(tx_envelop_xdr)
     tx_hash = imported_xdr.hash_meta()
 
-    privious_registered_xdr = r.get(tx_hash)
-    if privious_registered_xdr is not None:
-        tx_envelop_xdr = merge_envelops(tx_envelop_xdr, privious_registered_xdr)
+    previous_registered_xdr = r.get(tx_hash)
+    if previous_registered_xdr is not None:
+        tx_envelop_xdr = merge_envelops(tx_envelop_xdr, previous_registered_xdr)
 
     r.set(tx_hash, tx_envelop_xdr)
 
