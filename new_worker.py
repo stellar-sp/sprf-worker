@@ -1,11 +1,15 @@
-from transaction_receiver import run_rest_service
+from transaction_receiver import run_transaction_receiver
+from transaction_submitter import run_transaction_submitter
 import threading
 from ledger_checker import run_ledger_checker
+from transaction_flooder import *
 
 if __name__ == '__main__':
-    rest_service_thread = threading.Thread(target=run_rest_service)
-    rest_service_thread.start()
+    threading.Thread(target=run_transaction_receiver).start()
+    threading.Thread(target=run_transaction_flooder).start()
+    threading.Thread(target=run_transaction_submitter).start()
 
-    threading.Thread(target=run_ledger_checker).start()
+    t = threading.Thread(target=run_ledger_checker)
+    t.start()
+    t.join()
 
-    rest_service_thread.join()

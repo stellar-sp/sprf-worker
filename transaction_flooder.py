@@ -3,7 +3,7 @@ import db_manager
 import requests
 
 
-def flood_transactions_to_network():
+def run_transaction_flooder():
     while True:
         print("flooding")
         txs = db_manager.get_latest_transactions()

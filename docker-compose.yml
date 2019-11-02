@@ -6,8 +6,8 @@ services:
       dockerfile: Dockerfile
       context: .
       network: host
-#    env_file:
-#      - .env1
+    env_file:
+      - .env1
     ports:
       - 8000:8001
     volumes:

@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import json
 
 DB_FILE = os.environ.get("DB_FILE", "./.db")
 
@@ -38,16 +39,23 @@ class DbManager:
 
     def get_smart_account(self, account_id):
         cur = self.conn.cursor()
-        item = cur.execute("select * from smart_accounts where account_id = '" + account_id + "'").fetchone()
+        item = cur.execute("select account_id from smart_accounts where account_id = '" + account_id + "'").fetchone()
         if item is not None:
             return item[0]
         return None
 
-    def add_smart_account(self, smart_account):
+    def add_or_update_smart_account(self, smart_account):
         cur = self.conn.cursor()
-        cur.execute(
-            "insert into smart_accounts(account_id, data) values('" + smart_account[
-                'id'] + "', '" + smart_account + "') ON CONFLICT(account_id) DO UPDATE SET data='" + smart_account + "';")
+        json_data = json.dumps(smart_account)
+        previous_record = cur.execute(
+            "select account_id from smart_accounts where account_id='" + smart_account['id'] + "'").fetchone()
+        if previous_record:
+            cur.execute(
+                "update smart_accounts set data='" + json_data + "' where account_id='" + smart_account['id'] + "'")
+        else:
+            cur.execute(
+                "insert into smart_accounts(account_id, data) values('" + smart_account[
+                    'id'] + "', '" + json_data + "');")
         self.conn.commit()
 
     def add_smart_transaction(self, smart_account_id, transaction_hash, paging_token, xdr):

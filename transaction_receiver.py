@@ -61,9 +61,9 @@ def merge_envelops(xdr1, xdr2):
     return envelop1.xdr().decode()
 
 
-def run_rest_service():
+def run_transaction_receiver():
     app.run(port=TRANSACTION_EXPOSER_PORT)
 
 
 if __name__ == '__main__':
-    run_rest_service()
+    run_transaction_receiver()

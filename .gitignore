@@ -4,3 +4,4 @@
 .db*
 venv
 sample-accounts
+test_accounts.json

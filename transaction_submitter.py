@@ -13,9 +13,11 @@ r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 db_manager = DbManager()
 
 
-def submit_possible_transactions():
+def run_transaction_submitter():
     while True:
         for key in r.scan_iter():
+            # @TODO: before submitting transaction to network, check the signer count. the signer count should
+            #   be equal to med threshold not more not less
             res = horizon.submit(r.get(key))
             if hasattr(res, 'ledger'):
                 r.delete(key)

@@ -7,6 +7,9 @@ from stellar_base.transaction_envelope import TransactionEnvelope as Te
 from stellar_base.keypair import Keypair
 import json
 import time
+import base64
+import base58
+from binascii import unhexlify
 
 HORIZON_ADDRESS = os.environ.get('HORIZON_ADDRESS')
 IPFS_ADDRESS = os.environ.get('IPFS_ADDRESS')
@@ -28,13 +31,13 @@ if operation_paging_token_number == 0:
 
 def add_account_if_smart(account_id):
     account = horizon.account(account_id)
-    if not hasattr(account['data'], 'smart_program_image_address'):
+    if 'smart_program_image_address' not in account['data']:
         return
 
     # checking worker sign between signers
     found_signer = False
     for sig in account['signers']:
-        if sig['key'] == Keypair.from_seed(WORKER_SECRET_KEY).public_key() and sig['weight'] >= 1:
+        if sig['key'] == Keypair.from_seed(WORKER_SECRET_KEY).address().decode() and sig['weight'] >= 1:
             found_signer = True
             break
     if not found_signer:
@@ -46,16 +49,15 @@ def add_account_if_smart(account_id):
             return
 
     # checking thresholds
-    desired_weight = ((account['signers'] - 1) / 2) + 1
+    desired_weight = int((len(account['signers']) - 1) / 2) + 1
     if account['thresholds']['low_threshold'] != desired_weight or account['thresholds']['med_threshold'] != \
             desired_weight or account['thresholds']['high_threshold'] != desired_weight:
         return
 
-    if not hasattr(account['data'], 'latest_transaction_changed_state') or not hasattr(account['data'],
-                                                                                       'current_state'):
+    if 'latest_transaction_changed_state' not in account['data'] or 'current_state' not in account['data']:
         return
 
-    db_manager.add_smart_account(account)
+    db_manager.add_or_update_smart_account(account)
 
 
 def create_transaction(smart_account, new_state_file_hash, latest_transaction_changed_state):
@@ -82,14 +84,16 @@ def check_transaction_if_smart(op):
 
     smart_account = horizon.account(op['to'])
 
-    latest_transaction = horizon.transaction(smart_account['data']['latest_transaction_changed_state'])
+    latest_transaction_hash = base64.b64decode(smart_account['data']['latest_transaction_changed_state']).decode()
+    latest_transaction = horizon.transaction(latest_transaction_hash)
     if latest_transaction['paging_token'] > transaction['paging_token']:
         return
 
     if transaction['memo_type'] != 'hash':
         return
 
-    execution_config = json.loads(load_ipfs_file(transaction['memo']))
+    ipfs_hash = base58.b58encode(b'1220'+unhexlify(base64.b64decode(transaction['memo']).hex()))
+    execution_config = json.loads(load_ipfs_file(ipfs_hash))
 
     # controlling concurrency between transactions
     base_state = execution_config['base_state']
@@ -124,4 +128,9 @@ def run_ledger_checker():
                     add_account_if_smart(operation['source_account'])
 
             db_manager.set_latest_checked_paging_token(operation['paging_token'])
+            print("operation with paging token: " + operation['paging_token'] + " checked")
             cursor = operation['paging_token']
+
+
+if __name__ == '__main__':
+    run_ledger_checker()
