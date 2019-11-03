@@ -8,8 +8,6 @@ from stellar_base.keypair import Keypair
 import json
 import time
 import base64
-import base58
-from binascii import unhexlify
 
 HORIZON_ADDRESS = os.environ.get('HORIZON_ADDRESS')
 IPFS_ADDRESS = os.environ.get('IPFS_ADDRESS')

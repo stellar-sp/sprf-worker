@@ -17,7 +17,7 @@ def run_transaction_flooder():
                 if worker_peer_address_entry_name in smart_account['data']:
                     worker_peer_address = base64.b64decode(
                         smart_account['data'][worker_peer_address_entry_name]).decode()
-                    requests.post(url=worker_peer_address + '/api/' + smart_account['id'] + '/smart_transaction',
+                    requests.post(url=worker_peer_address + '/api/smart_transaction',
                                   json={"xdr": tx['xdr']})
                     print("sent xdr peer")
 

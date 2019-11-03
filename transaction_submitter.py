@@ -23,3 +23,7 @@ def run_transaction_submitter():
                 r.delete(key)
                 db_manager.delete_transaction(key)
         time.sleep(2)
+
+
+if __name__ == '__main__':
+    run_transaction_submitter()

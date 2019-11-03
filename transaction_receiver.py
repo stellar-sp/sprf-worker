@@ -10,12 +10,16 @@ from stellar_base.horizon import Horizon
 from stellar_base.transaction_envelope import TransactionEnvelope as Te
 from db_manager import *
 import json
+from stellar_base.network import Network
+from binascii import hexlify
+from stellar_base.keypair import *
 
 TRANSACTION_EXPOSER_PORT = os.environ.get('TRANSACTION_EXPOSER_PORT', '5002')
 HORIZON_ADDRESS = os.environ.get("HORIZON_ADDRESS")
 REDIS_HOST = os.environ.get("REDIS_HOST")
 REDIS_PORT = os.environ.get("REDIS_PORT")
 TRANSACTION_VALIDATOR_ADDRESS = os.environ.get("TRANSACTION_VALIDATOR_ADDRESS")
+NETWORK_PASSPHRASE = os.environ.get("NETWORK_PASSPHRASE")
 
 app = FlaskAPI(__name__)
 db_manager = DbManager()
@@ -23,8 +27,8 @@ r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 horizon = Horizon(HORIZON_ADDRESS)
 
 
-@app.route('/api/<string:smart_account_id>/smart_transaction', methods=['POST'])
-def receive_transaction(smart_account_id):
+@app.route('/api/smart_transaction', methods=['POST'])
+def receive_transaction():
     tx_envelop_xdr = jsonify(request.json).json['xdr']
 
     validation_result = requests.post(
@@ -37,14 +41,18 @@ def receive_transaction(smart_account_id):
         return validation_result
 
     imported_xdr = TxEnv.TransactionEnvelope.from_xdr(tx_envelop_xdr)
-    tx_hash = imported_xdr.hash_meta()
+    imported_xdr.network_id = Network(NETWORK_PASSPHRASE).network_id()
+
+    tx_hash = str(hexlify(imported_xdr.hash_meta()), "ascii")
     previous_registered_xdr = r.get(tx_hash)
     if previous_registered_xdr is not None:
         tx_envelop_xdr = merge_envelops(tx_envelop_xdr, previous_registered_xdr)
 
     r.set(tx_hash, tx_envelop_xdr)
 
-    return db_manager.get_smart_transactions(smart_account_id)
+    return {
+        "result": "ok"
+    }
 
 
 def merge_envelops(xdr1, xdr2):
