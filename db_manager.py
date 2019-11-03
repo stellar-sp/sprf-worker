@@ -39,9 +39,12 @@ class DbManager:
 
     def get_smart_account(self, account_id):
         cur = self.conn.cursor()
-        item = cur.execute("select account_id from smart_accounts where account_id = '" + account_id + "'").fetchone()
-        if item is not None:
-            return item[0]
+        row = cur.execute("select * from smart_accounts where account_id = '" + account_id + "'").fetchone()
+        if row is not None:
+            return {
+                "account_id": row[0],
+                "data": row[1]
+            }
         return None
 
     def add_or_update_smart_account(self, smart_account):
@@ -72,7 +75,16 @@ class DbManager:
 
     def get_latest_transactions(self):
         cur = self.conn.cursor()
-        return cur.execute("select * from smart_transactions order by paging_token desc limit 100").fetchall()
+        rows = cur.execute("select * from smart_transactions order by paging_token desc limit 100").fetchall()
+        transactions = []
+        for row in rows:
+            transactions.append({
+                "transaction_hash": row[0],
+                "smart_account_id": row[1],
+                "paging_token": row[2],
+                "xdr": row[3]
+            })
+        return transactions
 
     def delete_transaction(self, transaction_hash):
         cur = self.conn.cursor()

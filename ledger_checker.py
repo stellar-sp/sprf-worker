@@ -62,9 +62,8 @@ def add_account_if_smart(account_id):
 
 def create_transaction(smart_account, new_state_file_hash, latest_transaction_changed_state):
     operations = [
-        ManageData(data_name='current_state', data_value=new_state_file_hash, source=smart_account['account_id']),
-        ManageData(data_name='latest_transaction_changed_state', data_value=latest_transaction_changed_state,
-                   source=smart_account)
+        ManageData(data_name='current_state', data_value=new_state_file_hash),
+        ManageData(data_name='latest_transaction_changed_state', data_value=latest_transaction_changed_state)
     ]
 
     tx = Transaction(
@@ -76,7 +75,7 @@ def create_transaction(smart_account, new_state_file_hash, latest_transaction_ch
 
     envelope = Te(tx=tx, network_id=NETWORK_PASSPHRASE)
     envelope.sign(Keypair.from_seed(WORKER_SECRET_KEY))
-    return envelope.xdr()
+    return envelope.xdr().decode()
 
 
 def check_transaction_if_smart(op):
@@ -92,12 +91,14 @@ def check_transaction_if_smart(op):
     if transaction['memo_type'] != 'hash':
         return
 
-    ipfs_hash = base58.b58encode(b'1220'+unhexlify(base64.b64decode(transaction['memo']).hex()))
-    execution_config = json.loads(load_ipfs_file(ipfs_hash))
+    ipfs_hash = base58_to_ipfs_hash(transaction['memo'])
+    with open(load_ipfs_file(ipfs_hash), 'r') as f:
+        execution_config = json.load(f)
 
     # controlling concurrency between transactions
     base_state = execution_config['base_state']
-    if smart_account['data']['current_state'] != base_state:
+    current_account_state = base64.b64decode(smart_account['data']['current_state']).decode()
+    if current_account_state != base_state:
         return
 
     input_file = load_ipfs_file(execution_config['input_file'])

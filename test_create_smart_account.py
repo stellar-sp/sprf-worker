@@ -11,13 +11,12 @@ from stellar_base.memo import HashMemo
 import json
 from stellar_base.asset import Asset
 import base64
-import base58
-from binascii import hexlify
 
 HORIZON_ADDRESS = os.environ.get('HORIZON_ADDRESS')
 horizon = Horizon(HORIZON_ADDRESS)
 FRIENDBOT_ADDRESS = os.environ.get('FRIENDBOT_ADDRESS')
 SMART_PROGRAM_IMAGE_ADDRESS = os.environ.get('SMART_PROGRAM_IMAGE_ADDRESS')
+SMART_PROGRAM_IMAGE_HASH = os.environ.get('SMART_PROGRAM_IMAGE_HASH')
 NETWORK_PASSPHRASE = os.environ.get("NETWORK_PASSPHRASE")
 
 smart_account_keypair = Keypair.random()
@@ -49,7 +48,7 @@ else:
 
 
 def test():
-    # test_create_smart_account()
+    test_create_smart_account()
     test_create_smart_transaction()
 
 
@@ -64,6 +63,7 @@ def test_create_smart_account():
     operations = [
         ManageData(data_name='current_state', data_value=state_file_hash),
         ManageData(data_name='smart_program_image_address', data_value=SMART_PROGRAM_IMAGE_ADDRESS),
+        ManageData(data_name='smart_program_image_hash', data_value=SMART_PROGRAM_IMAGE_HASH),
         ManageData(data_name='execution_fee', data_value='1000'),
         ManageData(data_name='worker_1_peer_address', data_value='http://worker1:5002'),
         ManageData(data_name='worker_1_public_key', data_value=worker1_keypair.address().decode()),
@@ -108,7 +108,7 @@ def test_create_smart_transaction():
     with open(temp_execution_config_file[1], 'w') as f:
         json.dump(execution_config, f)
     execution_config_file_hash = upload_file_to_ipfs(temp_execution_config_file[1])
-    execution_config_file_hex = hexlify(base58.b58decode(execution_config_file_hash)).decode()[4:]
+    execution_config_file_hex = ipfs_hash_to_base58(execution_config_file_hash)
 
     tx = Transaction(
         source=user1_keypair.address().decode(),

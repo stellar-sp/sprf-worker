@@ -9,6 +9,7 @@ from flask_api import FlaskAPI
 from stellar_base.horizon import Horizon
 from stellar_base.transaction_envelope import TransactionEnvelope as Te
 from db_manager import *
+import json
 
 TRANSACTION_EXPOSER_PORT = os.environ.get('TRANSACTION_EXPOSER_PORT', '5002')
 HORIZON_ADDRESS = os.environ.get("HORIZON_ADDRESS")
@@ -22,19 +23,21 @@ r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 horizon = Horizon(HORIZON_ADDRESS)
 
 
-@app.route('/api/<string:smart_account_id>/smart_transaction/<string:smart_transaction_hash>', methods=['POST'])
+@app.route('/api/<string:smart_account_id>/smart_transaction', methods=['POST'])
 def receive_transaction(smart_account_id):
     tx_envelop_xdr = jsonify(request.json).json['xdr']
 
     validation_result = requests.post(
         url=TRANSACTION_VALIDATOR_ADDRESS + "/validate?remove_bad_signatures=true&remove_duplicate_signatures=true",
         json={'xdr': tx_envelop_xdr})
-    if validation_result.headers.status_code != 200:
+
+    if validation_result.status_code == 200:
+        tx_envelop_xdr = json.loads(validation_result.content.decode())['xdr']
+    else:
         return validation_result
 
     imported_xdr = TxEnv.TransactionEnvelope.from_xdr(tx_envelop_xdr)
     tx_hash = imported_xdr.hash_meta()
-
     previous_registered_xdr = r.get(tx_hash)
     if previous_registered_xdr is not None:
         tx_envelop_xdr = merge_envelops(tx_envelop_xdr, previous_registered_xdr)
