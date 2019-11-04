@@ -31,19 +31,12 @@ horizon = Horizon(HORIZON_ADDRESS)
 def receive_transaction():
     tx_envelop_xdr = jsonify(request.json).json['xdr']
 
-    validation_result = requests.post(
-        url=TRANSACTION_VALIDATOR_ADDRESS + "/validate?remove_bad_signatures=true&remove_duplicate_signatures=true",
-        json={'xdr': tx_envelop_xdr})
+    tx_envelop = TxEnv.TransactionEnvelope.from_xdr(tx_envelop_xdr)
+    tx_envelop.network_id = Network(NETWORK_PASSPHRASE).network_id()
 
-    if validation_result.status_code == 200:
-        tx_envelop_xdr = json.loads(validation_result.content.decode())['xdr']
-    else:
-        return validation_result
+    validate_envelop(tx_envelop, remove_bad_signatures=True, remove_duplicate_signatures=True)
 
-    imported_xdr = TxEnv.TransactionEnvelope.from_xdr(tx_envelop_xdr)
-    imported_xdr.network_id = Network(NETWORK_PASSPHRASE).network_id()
-
-    tx_hash = str(hexlify(imported_xdr.hash_meta()), "ascii")
+    tx_hash = str(hexlify(tx_envelop.hash_meta()), "ascii")
     previous_registered_xdr = r.get(tx_hash)
     if previous_registered_xdr is not None:
         tx_envelop_xdr = merge_envelops(tx_envelop_xdr, previous_registered_xdr)
@@ -70,6 +63,37 @@ def merge_envelops(xdr1, xdr2):
     envelop1.network_id = imported_xdr1.network_id
 
     return envelop1.xdr().decode()
+
+
+def validate_envelop(tx_envelop, remove_bad_signatures=False, remove_duplicate_signatures=False):
+    source_accounts = [tx_envelop.tx.source.decode()]
+    for op in tx_envelop.tx.operations:
+        if op.source is not None:
+            source_accounts.append(op.source.decode())
+
+    signers = []
+    for address in source_accounts:
+        for signer in horizon.account(address)['signers']:
+            if signer['weight'] > 0:
+                signers.append(signer['key'])
+
+    for i in range(len(tx_envelop.signatures)-1, -1, -1):
+        validated = False
+        for signer in signers:
+            try:
+                Keypair.from_address(signer).verify(tx_envelop.hash_meta(), tx_envelop.signatures[i].signature)
+                validated = True
+                break
+            except:
+                pass
+        if not validated and remove_bad_signatures:
+            tx_envelop.signatures.remove(tx_envelop.signatures[i])
+
+    if remove_duplicate_signatures:
+        for i in range(len(tx_envelop.signatures)-1, -1, -1):
+            for j in range(i-1, -1, -1):
+                if tx_envelop.signatures[i].signature == tx_envelop.signatures[j].signature:
+                    tx_envelop.signatures.remove(tx_envelop.signatures[i])
 
 
 def run_transaction_receiver():
