@@ -14,11 +14,10 @@ from stellar_base.network import Network
 from binascii import hexlify
 from stellar_base.keypair import *
 
-TRANSACTION_EXPOSER_PORT = os.environ.get('TRANSACTION_EXPOSER_PORT', '5002')
+TRANSACTION_RECEIVER_PORT = os.environ.get('TRANSACTION_RECEIVER_PORT', '5002')
 HORIZON_ADDRESS = os.environ.get("HORIZON_ADDRESS")
 REDIS_HOST = os.environ.get("REDIS_HOST")
 REDIS_PORT = os.environ.get("REDIS_PORT")
-TRANSACTION_VALIDATOR_ADDRESS = os.environ.get("TRANSACTION_VALIDATOR_ADDRESS")
 NETWORK_PASSPHRASE = os.environ.get("NETWORK_PASSPHRASE")
 
 app = FlaskAPI(__name__)
@@ -97,7 +96,7 @@ def validate_envelop(tx_envelop, remove_bad_signatures=False, remove_duplicate_s
 
 
 def run_transaction_receiver():
-    app.run(port=TRANSACTION_EXPOSER_PORT)
+    app.run(port=TRANSACTION_RECEIVER_PORT)
 
 
 if __name__ == '__main__':
