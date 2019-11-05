@@ -8,6 +8,7 @@ from stellar_base.keypair import Keypair
 import json
 import time
 import base64
+from stellar_base.exceptions import *
 
 HORIZON_ADDRESS = os.environ.get('HORIZON_ADDRESS')
 IPFS_ADDRESS = os.environ.get('IPFS_ADDRESS')
@@ -26,10 +27,20 @@ if operation_paging_token_number == 0:
     operation_paging_token_number = int(
         horizon.operations(order="asc", limit=1)["_embedded"]["records"][0]["paging_token"])
 
+latest_ledger = horizon.ledgers(order='desc', limit=1)
+TRANSACTION_BASE_FEE = latest_ledger['_embedded']['records'][0]['base_fee_in_stroops']
+
 
 def add_account_if_smart(account_id):
-    account = horizon.account(account_id)
-    if 'smart_program_image_address' not in account['data']:
+    try:
+        account = horizon.account(account_id)
+    except HorizonError as e:
+        if e.status_code == 404:
+            return
+        else:
+            print(e.message)
+
+    if 'smart_program_image_address' not in account['data'] or 'execution_fee' not in account['data']:
         return
 
     # checking worker sign between signers
@@ -67,7 +78,7 @@ def create_transaction(smart_account, new_state_file_hash, latest_transaction_ch
     tx = Transaction(
         source=smart_account['id'],
         sequence=horizon.account(smart_account['id']).get('sequence'),
-        fee=1000 * len(operations),
+        fee=int(TRANSACTION_BASE_FEE) * len(operations),
         operations=operations
     )
 
@@ -80,6 +91,11 @@ def check_transaction_if_smart(op):
     transaction = horizon.transaction(op['transaction_hash'])
 
     smart_account = horizon.account(op['to'])
+
+    execution_fee = float(base64.b64decode(smart_account['data']['execution_fee']).decode())
+
+    if float(op['amount']) * 10000000 < execution_fee:
+        return
 
     latest_transaction_hash = base64.b64decode(smart_account['data']['latest_transaction_changed_state']).decode()
     latest_transaction = horizon.transaction(latest_transaction_hash)
@@ -129,7 +145,3 @@ def run_ledger_checker():
             db_manager.set_latest_checked_paging_token(operation['paging_token'])
             print("operation with paging token: " + operation['paging_token'] + " checked")
             cursor = operation['paging_token']
-
-
-if __name__ == '__main__':
-    run_ledger_checker()

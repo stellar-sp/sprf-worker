@@ -1,7 +1,8 @@
 .idea
 **/__pycache__
-.env[1-9]*
+.env*
 .db*
 venv
 sample-accounts
 test_accounts.json
+**/*.pyc

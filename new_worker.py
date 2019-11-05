@@ -12,4 +12,3 @@ if __name__ == '__main__':
     t = threading.Thread(target=run_ledger_checker)
     t.start()
     t.join()
-

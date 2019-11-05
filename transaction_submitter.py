@@ -6,6 +6,7 @@ from db_manager import *
 import stellar_base.transaction_envelope as TxEnv
 from stellar_base.keypair import *
 from stellar_base.network import Network
+from stellar_base.exceptions import *
 
 HORIZON_ADDRESS = os.environ.get("HORIZON_ADDRESS")
 REDIS_HOST = os.environ.get("REDIS_HOST")
@@ -19,14 +20,20 @@ db_manager = DbManager()
 
 def run_transaction_submitter():
     while True:
+        print("checking new transaction for submitting")
         for key in r.scan_iter():
             xdr = r.get(key)
             validity_for_submission = check_max_and_min_required_signs(xdr)
             if validity_for_submission["meet_requirements"]:
-                res = horizon.submit(validity_for_submission["xdr"])
-                if 'ledger' in res:
-                    r.delete(key)
+                try:
+                    horizon.submit(validity_for_submission["xdr"])
                     db_manager.delete_transaction(key.decode())
+                except HorizonError as e:
+                    print("cannot submit transaction to network, due to: " + e.message)
+                    pass
+
+                r.delete(key)
+
         time.sleep(2)
 
 
@@ -76,7 +83,3 @@ def check_max_and_min_required_signs(tx_xdr):
             "meet_requirements": True,
             "xdr": tx_envelop.xdr()
         }
-
-
-if __name__ == '__main__':
-    run_transaction_submitter()

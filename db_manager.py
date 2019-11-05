@@ -7,7 +7,7 @@ DB_FILE = os.environ.get("DB_FILE", "./.db")
 
 class DbManager:
     def __init__(self):
-        self.conn = sqlite3.connect(DB_FILE)
+        self.conn = sqlite3.connect(DB_FILE, check_same_thread=False)
         self.init_db()
 
     def init_db(self):

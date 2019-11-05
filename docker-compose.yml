@@ -7,14 +7,41 @@ services:
       context: .
       network: host
     env_file:
-      - .env1
+      - .env
+    ports:
+      - 8001:8001
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  redis1:
+    image: redis:5
+
+  worker2:
+    build:
+      dockerfile: Dockerfile
+      context: .
+      network: host
+    env_file:
+      - .env
     ports:
       - 8000:8001
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./.env:/app/.env
 
-  redis:
+  redis2:
     image: redis:5
+
+  worker3:
+    build:
+      dockerfile: Dockerfile
+      context: .
+      network: host
+    env_file:
+      - .env
     ports:
-      - 6379:6379
+      - 8000:8001
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  redis3:
+    image: redis:5

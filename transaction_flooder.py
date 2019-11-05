@@ -2,6 +2,7 @@ import json
 from db_manager import *
 import requests
 import base64
+import time
 
 db_manager = DbManager()
 
@@ -20,7 +21,4 @@ def run_transaction_flooder():
                     requests.post(url=worker_peer_address + '/api/smart_transaction',
                                   json={"xdr": tx['xdr']})
                     print("sent xdr peer")
-
-
-if __name__ == '__main__':
-    run_transaction_flooder()
+        time.sleep(2)

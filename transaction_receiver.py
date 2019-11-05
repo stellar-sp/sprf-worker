@@ -38,7 +38,7 @@ def receive_transaction():
     tx_hash = str(hexlify(tx_envelop.hash_meta()), "ascii")
     previous_registered_xdr = r.get(tx_hash)
     if previous_registered_xdr is not None:
-        tx_envelop_xdr = merge_envelops(tx_envelop_xdr, previous_registered_xdr)
+        tx_envelop_xdr = merge_envelops(tx_envelop_xdr, previous_registered_xdr.decode())
 
     r.set(tx_hash, tx_envelop_xdr)
 
@@ -54,14 +54,16 @@ def merge_envelops(xdr1, xdr2):
     if imported_xdr1.hash_meta() != imported_xdr2.hash_meta() or imported_xdr1.network_id != imported_xdr2.network_id:
         raise Exception("cannot merge envelops, because envelops is not equals with each other")
 
-    for sign in imported_xdr2.signatures:
-        imported_xdr1.signatures.append(sign)
+    for sign2 in imported_xdr2.signatures:
+        found = False
+        for sign1 in imported_xdr1.signatures:
+            if sign1.signature == sign2.signature:
+                found = True
+                break
+        if not found:
+            imported_xdr1.signatures.append(sign2)
 
-    envelop1 = Te(tx=Tx.Transaction.from_xdr_object(imported_xdr1.to_xdr_object()),
-                  signatures=imported_xdr1.signatures)
-    envelop1.network_id = imported_xdr1.network_id
-
-    return envelop1.xdr().decode()
+    return imported_xdr1.xdr().decode()
 
 
 def validate_envelop(tx_envelop, remove_bad_signatures=False, remove_duplicate_signatures=False):
@@ -76,7 +78,7 @@ def validate_envelop(tx_envelop, remove_bad_signatures=False, remove_duplicate_s
             if signer['weight'] > 0:
                 signers.append(signer['key'])
 
-    for i in range(len(tx_envelop.signatures)-1, -1, -1):
+    for i in range(len(tx_envelop.signatures) - 1, -1, -1):
         validated = False
         for signer in signers:
             try:
@@ -89,15 +91,11 @@ def validate_envelop(tx_envelop, remove_bad_signatures=False, remove_duplicate_s
             tx_envelop.signatures.remove(tx_envelop.signatures[i])
 
     if remove_duplicate_signatures:
-        for i in range(len(tx_envelop.signatures)-1, -1, -1):
-            for j in range(i-1, -1, -1):
+        for i in range(len(tx_envelop.signatures) - 1, -1, -1):
+            for j in range(i - 1, -1, -1):
                 if tx_envelop.signatures[i].signature == tx_envelop.signatures[j].signature:
                     tx_envelop.signatures.remove(tx_envelop.signatures[i])
 
 
 def run_transaction_receiver():
     app.run(port=TRANSACTION_RECEIVER_PORT)
-
-
-if __name__ == '__main__':
-    run_transaction_receiver()
