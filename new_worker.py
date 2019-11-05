@@ -3,6 +3,11 @@ from transaction_submitter import run_transaction_submitter
 import threading
 from ledger_checker import run_ledger_checker
 from transaction_flooder import *
+import logging
+
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=LOG_LEVEL)
 
 if __name__ == '__main__':
     threading.Thread(target=run_transaction_receiver).start()
