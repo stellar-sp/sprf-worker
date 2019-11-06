@@ -13,12 +13,12 @@ from stellar_base.asset import Asset
 import base64
 
 HORIZON_ADDRESS = os.environ.get('HORIZON_ADDRESS')
-horizon = Horizon(HORIZON_ADDRESS)
 FRIENDBOT_ADDRESS = os.environ.get('FRIENDBOT_ADDRESS')
 SMART_PROGRAM_IMAGE_ADDRESS = os.environ.get('SMART_PROGRAM_IMAGE_ADDRESS')
 SMART_PROGRAM_IMAGE_HASH = os.environ.get('SMART_PROGRAM_IMAGE_HASH')
 NETWORK_PASSPHRASE = os.environ.get("NETWORK_PASSPHRASE")
 
+horizon = Horizon(HORIZON_ADDRESS)
 smart_account_keypair = Keypair.random()
 worker1_keypair = Keypair.random()
 user1_keypair = Keypair.random()
@@ -53,7 +53,7 @@ def test():
 
 
 def test_create_smart_account():
-    requests.get(FRIENDBOT_ADDRESS + '/?addr=' + smart_account_keypair.address().decode())
+    # requests.get(FRIENDBOT_ADDRESS + '/?addr=' + smart_account_keypair.address().decode())
     latest_transaction_changed_state = horizon.account_transactions(smart_account_keypair.address().decode()) \
         ['_embedded']['records'][0]['hash']
 
@@ -85,7 +85,7 @@ def test_create_smart_account():
 
 
 def test_create_smart_transaction():
-    # requests.get(FRIENDBOT_ADDRESS + '/?addr=' + user1_keypair.address().decode())
+    requests.get(FRIENDBOT_ADDRESS + '/?addr=' + user1_keypair.address().decode())
     operations = [
         Payment(destination=smart_account_keypair.address().decode(), amount='1', asset=Asset("XLM"))
     ]

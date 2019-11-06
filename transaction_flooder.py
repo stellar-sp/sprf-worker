@@ -3,13 +3,13 @@ from db_manager import *
 import requests
 import base64
 import time
+import logging
 
 db_manager = DbManager()
 
 
 def run_transaction_flooder():
     while True:
-        print("flooding")
         txs = db_manager.get_latest_transactions()
         for tx in txs:
             smart_account = json.loads(db_manager.get_smart_account(tx['smart_account_id'])['data'])
@@ -21,4 +21,7 @@ def run_transaction_flooder():
                     requests.post(url=worker_peer_address + '/api/smart_transaction',
                                   json={"xdr": tx['xdr']})
                     print("sent xdr peer")
-        time.sleep(2)
+
+        if len(txs) == 0:
+            logging.info("waiting for new transactions to flooding")
+            time.sleep(2)

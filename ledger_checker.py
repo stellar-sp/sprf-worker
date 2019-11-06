@@ -9,6 +9,7 @@ import json
 import time
 import base64
 from stellar_base.exceptions import *
+import logging
 
 HORIZON_ADDRESS = os.environ.get('HORIZON_ADDRESS')
 IPFS_ADDRESS = os.environ.get('IPFS_ADDRESS')
@@ -88,6 +89,7 @@ def create_transaction(smart_account, new_state_file_hash, latest_transaction_ch
 
 
 def check_transaction_if_smart(op):
+    logging.info("checking operation is smart. operation id: " + op['id'])
     transaction = horizon.transaction(op['transaction_hash'])
 
     smart_account = horizon.account(op['to'])
@@ -95,14 +97,18 @@ def check_transaction_if_smart(op):
     execution_fee = float(base64.b64decode(smart_account['data']['execution_fee']).decode())
 
     if float(op['amount']) * 10000000 < execution_fee:
+        logging.debug("transaction is not smart, because it has not sufficient fee. tx id: " + transaction['id'])
         return
 
     latest_transaction_hash = base64.b64decode(smart_account['data']['latest_transaction_changed_state']).decode()
     latest_transaction = horizon.transaction(latest_transaction_hash)
     if latest_transaction['paging_token'] > transaction['paging_token']:
+        logging.debug("transaction is old. because a newer transaction with paging token: " +
+                      latest_transaction['paging_token'] + " changed the smart account state before")
         return
 
     if transaction['memo_type'] != 'hash':
+        logging.debug("transaction is not smart. because it does not have memo. tx id: " + transaction['id'])
         return
 
     ipfs_hash = base58_to_ipfs_hash(transaction['memo'])
@@ -113,7 +119,10 @@ def check_transaction_if_smart(op):
     base_state = execution_config['base_state']
     current_account_state = base64.b64decode(smart_account['data']['current_state']).decode()
     if current_account_state != base_state:
+        logging.debug("the base state of smart transaction is not equal to current state of smart account")
         return
+
+    logging.info("accepted smart transaction for execution. tx id: " + transaction['id'])
 
     input_file = load_ipfs_file(execution_config['input_file'])
     sender = op['from']
@@ -126,6 +135,7 @@ def check_transaction_if_smart(op):
 
 def run_ledger_checker():
     cursor = operation_paging_token_number
+    logging.info("starting ledger checker with cursor: " + str(cursor))
     while True:
         operations = horizon.operations(cursor=cursor)['_embedded']['records']
         if len(operations) == 0:
@@ -143,5 +153,5 @@ def run_ledger_checker():
                     add_account_if_smart(operation['source_account'])
 
             db_manager.set_latest_checked_paging_token(operation['paging_token'])
-            print("operation with paging token: " + operation['paging_token'] + " checked")
+            logging.info("operation with paging token: " + operation['paging_token'] + " checked")
             cursor = operation['paging_token']

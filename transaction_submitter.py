@@ -7,6 +7,7 @@ import stellar_base.transaction_envelope as TxEnv
 from stellar_base.keypair import *
 from stellar_base.network import Network
 from stellar_base.exceptions import *
+import logging
 
 HORIZON_ADDRESS = os.environ.get("HORIZON_ADDRESS")
 REDIS_HOST = os.environ.get("REDIS_HOST")
@@ -20,8 +21,9 @@ db_manager = DbManager()
 
 def run_transaction_submitter():
     while True:
-        print("checking new transaction for submitting")
+        counter = 0
         for key in r.scan_iter():
+            counter += 1
             xdr = r.get(key)
             validity_for_submission = check_max_and_min_required_signs(xdr)
             if validity_for_submission["meet_requirements"]:
@@ -33,8 +35,9 @@ def run_transaction_submitter():
                     pass
 
                 r.delete(key)
-
-        time.sleep(2)
+        if counter == 0:
+            logging.info("waiting for new transaction to submitting")
+            time.sleep(2)
 
 
 def check_max_and_min_required_signs(tx_xdr):
