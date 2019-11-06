@@ -1,18 +1,13 @@
-import base64
 import tempfile
-
+import logging
 import docker
 
 from ipfs_utils import *
 
 
 def exec(smart_account, input_file, sender):
-    if 'current_state' in smart_account['data']:
-        current_state_hash = base64.b64decode(smart_account['data']['current_state']).decode()
-        current_state_file = load_ipfs_file(current_state_hash)
-    else:
-        f = tempfile.mkstemp()
-        current_state_file = f[1]
+    current_state_hash = base64.b64decode(smart_account['data']['current_state']).decode()
+    current_state_file = load_ipfs_file(current_state_hash)
 
     current_state_file_hash = get_sha256_of_file(current_state_file)
 
@@ -31,11 +26,10 @@ def exec(smart_account, input_file, sender):
     container_log = docker_client.containers.get(container.id).logs()
     container.remove()
     if container_result['StatusCode'] == 0:
-        print("successfully ran")
+        logging.info("smart program docker container successfully ran")
         new_state_file_hash = get_sha256_of_file(current_state_file)
         if current_state_file_hash != new_state_file_hash:
-            print("the state change by the program")
-            print("signing transaction and getting result back to user")
+            logging.info("smart program state changed")
             upload_file_to_ipfs(current_state_file)
             return {
                 "success": True,

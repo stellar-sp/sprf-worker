@@ -39,7 +39,7 @@ def add_account_if_smart(account_id):
         if e.status_code == 404:
             return
         else:
-            print(e.message)
+            logging.error(e.message)
 
     if 'smart_program_image_address' not in account['data'] or 'execution_fee' not in account['data']:
         return
@@ -89,7 +89,7 @@ def create_transaction(smart_account, new_state_file_hash, latest_transaction_ch
 
 
 def check_transaction_if_smart(op):
-    logging.info("checking operation is smart. operation id: " + op['id'])
+    logging.info("checking operation. operation id: " + op['id'])
     transaction = horizon.transaction(op['transaction_hash'])
 
     smart_account = horizon.account(op['to'])
@@ -102,7 +102,7 @@ def check_transaction_if_smart(op):
 
     latest_transaction_hash = base64.b64decode(smart_account['data']['latest_transaction_changed_state']).decode()
     latest_transaction = horizon.transaction(latest_transaction_hash)
-    if latest_transaction['paging_token'] > transaction['paging_token']:
+    if latest_transaction['paging_token'] >= transaction['paging_token']:
         logging.debug("transaction is old. because a newer transaction with paging token: " +
                       latest_transaction['paging_token'] + " changed the smart account state before")
         return
@@ -128,9 +128,12 @@ def check_transaction_if_smart(op):
     sender = op['from']
     result = exec(smart_account, input_file, sender)
     if result['success'] and result['modified']:
+        logging.info("smart program execution completed successfully. creating transaction to sending to peers")
         envelop_xdr = create_transaction(smart_account, result['new_state_file_hash'], op['transaction_hash'])
         db_manager.add_smart_transaction(smart_account['id'], op['transaction_hash'], transaction['paging_token'],
                                          envelop_xdr)
+    else:
+        logging.error("executing smart program failed with the following error: " + result['log'])
 
 
 def run_ledger_checker():

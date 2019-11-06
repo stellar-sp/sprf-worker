@@ -18,10 +18,12 @@ def run_transaction_flooder():
                 if worker_peer_address_entry_name in smart_account['data']:
                     worker_peer_address = base64.b64decode(
                         smart_account['data'][worker_peer_address_entry_name]).decode()
-                    requests.post(url=worker_peer_address + '/api/smart_transaction',
-                                  json={"xdr": tx['xdr']})
-                    print("sent xdr peer")
+                    try:
+                        requests.post(url=worker_peer_address + '/api/smart_transaction',
+                                      json={"xdr": tx['xdr']})
+                        logging.info("sent a signed transaction to peer")
+                    except ConnectionError as e:
+                        logging.error("error occurred during send signed transaction to peer", e.strerror)
 
-        if len(txs) == 0:
-            logging.info("waiting for new transactions to flooding")
-            time.sleep(2)
+        logging.info("waiting for new transactions to flooding")
+        time.sleep(5)

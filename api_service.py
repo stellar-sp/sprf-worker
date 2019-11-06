@@ -1,18 +1,14 @@
-import os
-
+from binascii import hexlify
+from flask_api import status
 import redis
-import requests
-import stellar_base.transaction as Tx
 import stellar_base.transaction_envelope as TxEnv
 from flask import request, jsonify
 from flask_api import FlaskAPI
 from stellar_base.horizon import Horizon
-from stellar_base.transaction_envelope import TransactionEnvelope as Te
-from db_manager import *
-import json
-from stellar_base.network import Network
-from binascii import hexlify
 from stellar_base.keypair import *
+from stellar_base.network import Network
+from ipfs_utils import *
+from db_manager import *
 
 TRANSACTION_RECEIVER_PORT = os.environ.get('TRANSACTION_RECEIVER_PORT', '5002')
 HORIZON_ADDRESS = os.environ.get("HORIZON_ADDRESS")
@@ -24,6 +20,25 @@ app = FlaskAPI(__name__)
 db_manager = DbManager()
 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 horizon = Horizon(HORIZON_ADDRESS)
+from exec_engine import *
+
+
+@app.route('/api/smart_program/<string:smart_account_id>', methods=['GET'])
+def exec_getter_method_of_smart_contract(smart_account_id):
+    if db_manager.get_smart_account(smart_account_id) is None:
+        return {'success': False,
+                'message': 'this smart account not supported by this worker'}, status.HTTP_400_BAD_REQUEST
+
+    input_file_hash = request.args.get('input_file_hash')
+    input_file = load_ipfs_file(input_file_hash)
+
+    sender = request.args.get('sender')
+    smart_account = horizon.account(smart_account_id)
+    result = exec(smart_account, input_file, sender)
+    if result['success'] and result['modified']:
+        return {'success': False,
+                'message': 'a setter method called! only getter methods can be called through this api'}
+    return result
 
 
 @app.route('/api/smart_transaction', methods=['POST'])
@@ -97,5 +112,5 @@ def validate_envelop(tx_envelop, remove_bad_signatures=False, remove_duplicate_s
                     tx_envelop.signatures.remove(tx_envelop.signatures[i])
 
 
-def run_transaction_receiver():
+def run_api_service():
     app.run(port=TRANSACTION_RECEIVER_PORT)

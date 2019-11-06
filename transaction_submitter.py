@@ -31,13 +31,13 @@ def run_transaction_submitter():
                     horizon.submit(validity_for_submission["xdr"])
                     db_manager.delete_transaction(key.decode())
                 except HorizonError as e:
-                    print("cannot submit transaction to network, due to: " + e.message)
+                    logging.error("cannot submit transaction to network, due to: " + e.message)
                     pass
 
                 r.delete(key)
         if counter == 0:
             logging.info("waiting for new transaction to submitting")
-            time.sleep(2)
+            time.sleep(5)
 
 
 def check_max_and_min_required_signs(tx_xdr):
