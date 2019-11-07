@@ -25,5 +25,4 @@ def run_transaction_flooder():
                     except ConnectionError as e:
                         logging.error("error occurred during send signed transaction to peer", e.strerror)
 
-        logging.info("waiting for new transactions to flooding")
         time.sleep(5)

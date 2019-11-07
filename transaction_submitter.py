@@ -21,9 +21,7 @@ db_manager = DbManager()
 
 def run_transaction_submitter():
     while True:
-        counter = 0
         for key in r.scan_iter():
-            counter += 1
             xdr = r.get(key)
             validity_for_submission = check_max_and_min_required_signs(xdr)
             if validity_for_submission["meet_requirements"]:
@@ -35,9 +33,8 @@ def run_transaction_submitter():
                     pass
 
                 r.delete(key)
-        if counter == 0:
-            logging.info("waiting for new transaction to submitting")
-            time.sleep(5)
+
+        time.sleep(5)
 
 
 def check_max_and_min_required_signs(tx_xdr):

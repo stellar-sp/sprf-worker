@@ -1,28 +1,44 @@
-import sqlite3
 import os
 import json
+import psycopg2
 
-DB_FILE = os.environ.get("DB_FILE", "./.db")
+POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.environ.get("POSTGRES_DB", "sprf")
+POSTGRES_USER = os.environ.get("POSTGRES_USER", "sprf")
+POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "secure_password")
 
 
 class DbManager:
+    __instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if DbManager.__instance is None:
+            DbManager.__instance = object.__new__(cls)
+        return DbManager.__instance
+
     def __init__(self):
-        self.conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+        self.conn = psycopg2.connect(host=POSTGRES_HOST, port=POSTGRES_PORT, database=POSTGRES_DB, user=POSTGRES_USER
+                                     , password=POSTGRES_PASSWORD)
         self.init_db()
 
     def init_db(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='configs';")
+        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE  table_schema = 'public' \
+                    AND table_name = 'configs');")
         item = cur.fetchone()
-        if item is None:
+        if item[0] is False:
             cur.execute("CREATE TABLE configs(key text primary key, value text);")
             cur.execute("CREATE TABLE smart_accounts(account_id text primary key, data text)")
             cur.execute("CREATE TABLE smart_transactions(transaction_hash text primary key, smart_account_id text"
                         ", paging_token int, xdr text)")
+            cur.close()
+            self.conn.commit()
 
     def get_latest_checked_paging_token(self):
         cur = self.conn.cursor()
-        item = cur.execute("select value from configs where key = 'latest_checked_paging_token'").fetchone()
+        cur.execute("select value from configs where key = 'latest_checked_paging_token'")
+        item = cur.fetchone()
         if item is not None:
             return item[0]
         return 0
@@ -39,7 +55,8 @@ class DbManager:
 
     def get_smart_account(self, account_id):
         cur = self.conn.cursor()
-        row = cur.execute("select * from smart_accounts where account_id = '" + account_id + "'").fetchone()
+        cur.execute("select * from smart_accounts where account_id = '" + account_id + "'")
+        row = cur.fetchone()
         if row is not None:
             return {
                 "account_id": row[0],
@@ -50,8 +67,8 @@ class DbManager:
     def add_or_update_smart_account(self, smart_account):
         cur = self.conn.cursor()
         json_data = json.dumps(smart_account)
-        previous_record = cur.execute(
-            "select account_id from smart_accounts where account_id='" + smart_account['id'] + "'").fetchone()
+        cur.execute("select account_id from smart_accounts where account_id='" + smart_account['id'] + "'")
+        previous_record = cur.fetchone()
         if previous_record:
             cur.execute(
                 "update smart_accounts set data='" + json_data + "' where account_id='" + smart_account['id'] + "'")
@@ -75,7 +92,8 @@ class DbManager:
 
     def get_latest_transactions(self):
         cur = self.conn.cursor()
-        rows = cur.execute("select * from smart_transactions order by paging_token desc limit 100").fetchall()
+        cur.execute("select * from smart_transactions order by paging_token desc limit 100")
+        rows = cur.fetchall()
         transactions = []
         for row in rows:
             transactions.append({
@@ -90,3 +108,7 @@ class DbManager:
         cur = self.conn.cursor()
         cur.execute("delete from smart_transactions where transaction_hash='" + transaction_hash + "'")
         self.conn.commit()
+
+# if __name__ == '__main__':
+#    db = DbManager()
+#    db.get_latest_transactions()
