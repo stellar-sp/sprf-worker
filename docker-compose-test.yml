@@ -1,0 +1,15 @@
+version: "3.4"
+services:
+  redis1:
+    image: redis:5
+    ports:
+      - 6379:6379
+
+  postgres1:
+    image: postgres:9.6
+    environment:
+      - POSTGRES_DB=sprf
+      - POSTGRES_USER=sprf
+      - POSTGRES_PASSWORD=secure_password
+    ports:
+      - 5432:5432

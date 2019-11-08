@@ -113,4 +113,4 @@ def validate_envelop(tx_envelop, remove_bad_signatures=False, remove_duplicate_s
 
 
 def run_api_service():
-    app.run(port=TRANSACTION_RECEIVER_PORT)
+    app.run(host="0.0.0.0", port=TRANSACTION_RECEIVER_PORT)

@@ -1,7 +1,6 @@
 .idea
 **/__pycache__
 .env*
-.db*
 venv
 sample-accounts
 test_accounts.json
