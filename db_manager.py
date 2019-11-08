@@ -31,7 +31,7 @@ class DbManager:
             cur.execute("CREATE TABLE configs(key text primary key, value text);")
             cur.execute("CREATE TABLE smart_accounts(account_id text primary key, data text)")
             cur.execute("CREATE TABLE smart_transactions(transaction_hash text primary key, smart_account_id text"
-                        ", paging_token int, xdr text)")
+                        ", paging_token bigint, xdr text)")
             cur.close()
             self.conn.commit()
 

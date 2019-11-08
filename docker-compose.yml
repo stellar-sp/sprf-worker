@@ -10,7 +10,7 @@ services:
     env_file:
       - .env1
     ports:
-      - 5002:5002
+      - 5001:5002
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/ipfs-files/:/tmp/ipfs-files/
@@ -33,7 +33,7 @@ services:
     env_file:
       - .env2
     ports:
-      - 5001:5002
+      - 5002:5002
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/ipfs-files/:/tmp/ipfs-files/
