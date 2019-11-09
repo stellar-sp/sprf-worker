@@ -48,7 +48,7 @@ class S(BaseHTTPRequestHandler):
         sender = execution_envelop.get_sender()
 
         input_file_hash = execution_envelop.get_input_file()
-        input_file = load_ipfs_file(input_file_hash)
+        input_file = IpfsUtils().load_ipfs_file(input_file_hash)
         res = exec(smart_account, sender)
         if res['success'] and res['modified']:
             transaction = create_transaction(res['new_state_file_hash'], smart_account, sender, execution_envelop)

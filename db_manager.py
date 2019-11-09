@@ -31,7 +31,8 @@ class DbManager:
             cur.execute("CREATE TABLE configs(key text primary key, value text);")
             cur.execute("CREATE TABLE smart_accounts(account_id text primary key, data text)")
             cur.execute("CREATE TABLE smart_transactions(transaction_hash text primary key, smart_account_id text"
-                        ", paging_token bigint, xdr text)")
+                        ", paging_token bigint, generated_xdr_hash text, generated_xdr text)")
+            cur.execute("CREATE TABLE generated_xdr(tx_hash text primary key, smart_tx_hash text, xdr text)")
             cur.close()
             self.conn.commit()
 
@@ -78,17 +79,14 @@ class DbManager:
                     'id'] + "', '" + json_data + "');")
         self.conn.commit()
 
-    def add_smart_transaction(self, smart_account_id, transaction_hash, paging_token, xdr):
+    def add_smart_transaction(self, transaction_hash, smart_account_id, paging_token, generated_xdr_hash,
+                              generated_xdr):
         cur = self.conn.cursor()
         cur.execute(
-            "insert into smart_transactions(transaction_hash, smart_account_id, paging_token, xdr) values('"
-            + transaction_hash + "', '" + smart_account_id + "', " + paging_token + ", '" + xdr + "')")
+            "insert into smart_transactions(transaction_hash, smart_account_id, paging_token, generated_xdr_hash, "
+            "generated_xdr) values('" + transaction_hash + "', '" + smart_account_id + "', " + paging_token + ", '" +
+            generated_xdr_hash + "', '" + generated_xdr + "')")
         self.conn.commit()
-
-    def get_smart_transactions(self, smart_account_id):
-        cur = self.conn.cursor()
-        cur.execute("select * from smart_transactions where smart_account_id = '" + smart_account_id + "'")
-        return cur.fetchall()
 
     def get_latest_transactions(self):
         cur = self.conn.cursor()
@@ -100,13 +98,14 @@ class DbManager:
                 "transaction_hash": row[0],
                 "smart_account_id": row[1],
                 "paging_token": row[2],
-                "xdr": row[3]
+                "xdr_hash": row[3],
+                "xdr": row[4]
             })
         return transactions
 
     def delete_transaction(self, transaction_hash):
         cur = self.conn.cursor()
-        cur.execute("delete from smart_transactions where transaction_hash='" + transaction_hash + "'")
+        cur.execute("delete from smart_transactions where generated_xdr_hash='" + transaction_hash + "'")
         self.conn.commit()
 
 # if __name__ == '__main__':

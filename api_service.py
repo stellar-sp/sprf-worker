@@ -1,13 +1,12 @@
-from binascii import hexlify
-from flask_api import status
 import redis
 import stellar_base.transaction_envelope as TxEnv
 from flask import request, jsonify
 from flask_api import FlaskAPI
+from flask_api import status
 from stellar_base.horizon import Horizon
 from stellar_base.keypair import *
 from stellar_base.network import Network
-from ipfs_utils import *
+from exec_engine import *
 from db_manager import *
 
 TRANSACTION_RECEIVER_PORT = os.environ.get('TRANSACTION_RECEIVER_PORT', '5002')
@@ -20,7 +19,6 @@ app = FlaskAPI(__name__)
 db_manager = DbManager()
 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 horizon = Horizon(HORIZON_ADDRESS)
-from exec_engine import *
 
 
 @app.route('/api/smart_program/<string:smart_account_id>', methods=['GET'])
@@ -30,7 +28,7 @@ def exec_getter_method_of_smart_contract(smart_account_id):
                 'message': 'this smart account not supported by this worker'}, status.HTTP_400_BAD_REQUEST
 
     input_file_hash = request.args.get('input_file_hash')
-    input_file = load_ipfs_file(input_file_hash)
+    input_file = IpfsUtils().load_ipfs_file(input_file_hash)
 
     sender = request.args.get('sender')
     smart_account = horizon.account(smart_account_id)
@@ -44,16 +42,21 @@ def exec_getter_method_of_smart_contract(smart_account_id):
 @app.route('/api/smart_transaction', methods=['POST'])
 def receive_transaction():
     tx_envelop_xdr = jsonify(request.json).json['xdr']
+    logging.debug("received a tx from peer: " + tx_envelop_xdr)
 
     tx_envelop = TxEnv.TransactionEnvelope.from_xdr(tx_envelop_xdr)
     tx_envelop.network_id = Network(NETWORK_PASSPHRASE).network_id()
 
     validate_envelop(tx_envelop, remove_bad_signatures=True, remove_duplicate_signatures=True)
 
+    logging.debug("tx received from peer validated: " + tx_envelop.xdr().decode())
+
     tx_hash = str(hexlify(tx_envelop.hash_meta()), "ascii")
     previous_registered_xdr = r.get(tx_hash)
     if previous_registered_xdr is not None:
-        tx_envelop_xdr = merge_envelops(tx_envelop_xdr, previous_registered_xdr.decode())
+        logging.debug("found a tx in cache that mach received xdr. trying to merge together")
+        tx_envelop_xdr = merge_envelops(tx_envelop.xdr(), previous_registered_xdr.decode())
+        logging.debug("tx in cache and received from peer merged: " + tx_envelop_xdr)
 
     r.set(tx_hash, tx_envelop_xdr)
 

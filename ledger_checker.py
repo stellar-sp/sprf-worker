@@ -85,7 +85,7 @@ def create_transaction(smart_account, new_state_file_hash, latest_transaction_ch
 
     envelope = Te(tx=tx, network_id=NETWORK_PASSPHRASE)
     envelope.sign(Keypair.from_seed(WORKER_SECRET_KEY))
-    return envelope.xdr().decode()
+    return envelope
 
 
 def check_transaction_if_smart(op):
@@ -110,9 +110,9 @@ def check_transaction_if_smart(op):
     if transaction['memo_type'] != 'hash':
         logging.debug("transaction is not smart. because it does not have memo. tx id: " + transaction['id'])
         return
-
-    ipfs_hash = base58_to_ipfs_hash(transaction['memo'])
-    with open(load_ipfs_file(ipfs_hash), 'r') as f:
+    ipfs_utils = IpfsUtils()
+    ipfs_hash = ipfs_utils.base58_to_ipfs_hash(transaction['memo'])
+    with open(ipfs_utils.load_ipfs_file(ipfs_hash), 'r') as f:
         execution_config = json.load(f)
 
     # controlling concurrency between transactions
@@ -124,14 +124,16 @@ def check_transaction_if_smart(op):
 
     logging.info("accepted smart transaction for execution. tx id: " + transaction['id'])
 
-    input_file = load_ipfs_file(execution_config['input_file'])
+    input_file = ipfs_utils.load_ipfs_file(execution_config['input_file'])
     sender = op['from']
     result = exec(smart_account, input_file, sender)
     if result['success'] and result['modified']:
-        logging.info("smart program execution completed successfully. creating transaction to sending to peers")
-        envelop_xdr = create_transaction(smart_account, result['new_state_file_hash'], op['transaction_hash'])
-        db_manager.add_smart_transaction(smart_account['id'], op['transaction_hash'], transaction['paging_token'],
-                                         envelop_xdr)
+        logging.info("smart program execution completed successfully")
+        envelope = create_transaction(smart_account, result['new_state_file_hash'], op['transaction_hash'])
+        logging.debug("created xdr for saving in db: " + envelope.xdr().decode())
+        tx_hash = str(hexlify(envelope.hash_meta()), "ascii")
+        db_manager.add_smart_transaction(op['transaction_hash'], smart_account['id'], transaction['paging_token'],
+                                         tx_hash, envelope.xdr().decode())
     else:
         logging.error("executing smart program failed with the following error: " + result['log'])
 

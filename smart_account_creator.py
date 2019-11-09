@@ -20,6 +20,7 @@ def test_create_smart_account():
     smart_program_image_hash = config.get('default', 'SMART_PROGRAM_IMAGE_HASH')
     network_passphrase = config.get('default', 'NETWORK_PASSPHRASE')
     smart_account_secret_key = config.get('default', 'SMART_ACCOUNT_SECRET_KEY')
+    ipfs_address = config.get('default', 'IPFS_ADDRESS')
     workers = json.loads(config.get('default', 'WORKERS'))
 
     horizon = Horizon(horizon_address)
@@ -30,7 +31,7 @@ def test_create_smart_account():
         ['_embedded']['records'][0]['hash']
 
     temp_state_file = tempfile.mkstemp()
-    state_file_hash = upload_file_to_ipfs(temp_state_file[1])
+    state_file_hash = IpfsUtils(ipfs_address=ipfs_address).upload_file_to_ipfs(temp_state_file[1])
 
     operations = [
         ManageData(data_name='current_state', data_value=state_file_hash),
