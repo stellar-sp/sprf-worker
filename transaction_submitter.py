@@ -8,7 +8,6 @@ from stellar_base.keypair import *
 from stellar_base.network import Network
 from stellar_base.exceptions import *
 import logging
-import sys
 
 HORIZON_ADDRESS = os.environ.get("HORIZON_ADDRESS")
 REDIS_HOST = os.environ.get("REDIS_HOST")
