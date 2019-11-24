@@ -6,3 +6,4 @@ sample-accounts
 test_accounts.json
 **/*.pyc
 create_smart_account_config.ini
+ipfs-data
