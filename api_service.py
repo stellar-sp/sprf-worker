@@ -14,6 +14,7 @@ HORIZON_ADDRESS = os.environ.get("HORIZON_ADDRESS")
 REDIS_HOST = os.environ.get("REDIS_HOST")
 REDIS_PORT = os.environ.get("REDIS_PORT")
 NETWORK_PASSPHRASE = os.environ.get("NETWORK_PASSPHRASE")
+IPFS_ADDRESS = os.environ.get('IPFS_ADDRESS')
 
 app = FlaskAPI(__name__)
 db_manager = DbManager()
@@ -62,6 +63,15 @@ def receive_transaction():
 
     return {
         "result": "ok"
+    }
+
+
+@app.route('/api/configs', methods=['GET'])
+def get_configs():
+    return {
+        "HORIZON_ADDRESS": HORIZON_ADDRESS,
+        "NETWORK_PASSPHRASE": NETWORK_PASSPHRASE,
+        "IPFS_ADDRESS": IPFS_ADDRESS
     }
 
 
